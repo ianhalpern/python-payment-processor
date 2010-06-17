@@ -1,0 +1,3 @@
+#!/bin/bash
+
+cp -r payment /usr/lib/python2.6/
