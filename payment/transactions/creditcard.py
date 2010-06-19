@@ -1,4 +1,5 @@
 from payment.transactions import GenericTransaction
+from payment.exceptions   import *
 
 class CreditCard( GenericTransaction ):
 

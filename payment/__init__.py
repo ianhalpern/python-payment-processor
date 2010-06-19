@@ -1,7 +1,7 @@
 import re
 from payment.exceptions import *
 
-class Gateway:
+class Gateway( object ):
 	'''The Gateway class is a wrapper around the gateways found in payment.gateways. It should be
 	   called with the name of the gateway as the first paramater. example: Gateway( 'authorize.net' )'''
 
@@ -20,7 +20,7 @@ class Gateway:
 	def __getattr__( self, value ):
 		return getattr( self.__dict__['gateway'], value )
 
-class Transaction:
+class Transaction( object ):
 
 	transaction = None
 

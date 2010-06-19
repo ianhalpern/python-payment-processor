@@ -25,6 +25,7 @@ class AuthorizeNet():
 
 
 class AuthorizeNetAIM_3_1( GenericGateway ):
+	batch_support = False
 
 	url = URL_STANDARD
 
@@ -64,30 +65,26 @@ class AuthorizeNetAIM_3_1( GenericGateway ):
 		'x_customer_ip': None
 	}
 
-	def __init__( self, login=None, trans_key=None, test_url=False ):
+	trans_id_cache = None
+
+	def __init__( self, login=None, trans_key=None, use_test_url=False, **kwargs ):
+		GenericGateway.__init__( self, **kwargs )
+
 		if not login or not trans_key:
 			raise GatewayInitializeError(
 			  "The authorize.net gateway requires both a 'login' and 'trans_key' argument." )
 
-		if test_url:
+		if use_test_url:
 			self.url = URL_TEST
+
+		self.trans_id_cache = {}
 
 		self.api = dict( self.api )
 
 		self.api['x_login']    = login
 		self.api['x_tran_key'] = trans_key
 
-	def call( self, api ):
-		post_str = '&'.join( [ k + '=' + urllib.quote( str(v) ) for k, v in api.items() if v ] )
-		request  = urllib2.Request( self.url, post_str )
-		response = urllib2.urlopen( request ).read()
-		return response
-
-	def authorize( self, transaction ):
-		api = dict( self.api )
-
-		api['x_type'] = 'AUTH_ONLY'
-
+	def call( self, transaction, api ):
 		if transaction.method == 'CC':
 			api['x_method']    = 'CC'
 			api['x_amount']    = transaction.amount
@@ -96,34 +93,87 @@ class AuthorizeNetAIM_3_1( GenericGateway ):
 			api['x_card_code'] = transaction.card_code
 			api['x_zip']       = transaction.zip_code
 		else:
-			raise MethodUnsupportedByGateway(
-			  "Method '%s' is unsupported by authorize.net AIM 3.1 gateway." % transaction.method )
+			raise PaymentMethodUnsupportedByGateway(
+			  "Payment Method '%s' is unsupported by authorize.net AIM 3.1 gateway." % transaction.method )
 
-		response = self.call( api )
+		post_str = '&'.join( [ k + '=' + urllib.quote( str(v) ) for k, v in api.items() if v ] )
+		request  = urllib2.Request( self.url, post_str )
+		response = urllib2.urlopen( request ).read().split( api['x_delim_char'] )
 
-		return response
+		# A = Address (Street) matches, ZIP does not
+		# B = Address information not provided for AVS check
+		# E = AVS errorG = Non-U.S. Card Issuing Bank
+		# N = No Match on Address (Street) or ZIP
+		# P = AVS not applicable for this transaction
+		# R = Retry - System unavailable or timed out
+		# S = Service not supported by issuer
+		# U = Address information is unavailable
+		# W = Nine digit ZIP matches, Address (Street) does not
+		# X = Address (Street) and nine digit ZIP match
+		# Y = Address (Street) and five digit ZIP match
+		# Z = Five digit ZIP matches, Address (Street) does not
+		avs_response = response[5]
 
+		# M = Match, N = No Match, P = Not Processed, S = Should have been present, U = Issuer unable to process request
+		ccv_response = response[39]
 
+		if response[0] != '1':
+			if response[0] == '2': # Declined
+				raise ProcessingDeclined( response[3], error_code=response[2], avs_response=avs_response, ccv_response=ccv_response )
+			else: # 3 = Error, 4 = Held for review
+				raise ProcessingError( response[3], error_code=response[2] )
 
-"""
-def call_auth( amount, card_num, exp_date, card_code, zip_code, request_ip=None ):
-	'''Call authorize.net and get a result dict back'''
-	import urllib2, urllib
-	payment_post = dict( API )
-	payment_post['x_amount'] = amount
-	payment_post['x_card_num'] = card_num
-	payment_post['x_exp_date'] = exp_date
-	payment_post['x_card_code'] = card_code
-	payment_post['x_zip'] = zip_code
-	payment_request = urllib2.Request( url, urllib.urlencode(payment_post))
-	r = urllib2.urlopen(payment_request).read()
-	return r
+		if response[6] != '0':
+			self.trans_id_cache[ transaction.__id__ ] = response[6] # transaction id
+		return response[6]
 
-def call_capture(trans_id): # r.split('|')[6] we get back from the first call, trans_id
-	capture_post = API
-	capture_post['x_type'] = 'PRIOR_AUTH_CAPTURE'
-	capture_post['x_trans_id'] = trans_id
-	capture_request = urllib2.Request( url, urllib.urlencode(capture_post))
-	r = urllib2.urlopen(capture_request).read()
-	return r
-"""
+	def process( self, transaction ):
+		api = dict( self.api )
+
+		if transaction.__id__ in self.trans_id_cache:
+			api['x_type'] = 'PRIOR_AUTH_CAPTURE'
+			api['x_trans_id'] = self.trans_id_cache[ transaction.__id__ ]
+		else:
+			api['x_type'] = 'AUTH_CAPTURE'
+
+		return self.call( transaction, api )
+
+	def authorize( self, transaction ):
+		api = dict( self.api )
+		api['x_type'] = 'AUTH_ONLY'
+
+		return self.call( transaction, api )
+
+	def capture( self, transaction, auth_code=None ):
+		api = dict( self.api )
+		api['x_type'] = 'CAPTURE_ONLY'
+
+		if auth_code != None:
+			api['x_auth_code'] = auth_code
+		elif transaction.__id__ in self.trans_id_cache:
+			api['x_type'] = 'PRIOR_AUTH_CAPTURE'
+			api['x_trans_id'] = self.trans_id_cache[ transaction.__id__ ]
+
+		return self.call( transaction, api )
+
+	def refund( self, transaction, trans_id=None ):
+		api = dict( self.api )
+		api['x_type'] = 'CREDIT'
+
+		if trans_id != None:
+			api['x_trans_id'] = trans_id
+		elif transaction.__id__ in self.trans_id_cache:
+			api['x_trans_id'] = self.trans_id_cache[ transaction.__id__ ]
+
+		return self.call( transaction, api )
+
+	def void( self, transaction, trans_id=None ):
+		api = dict( self.api )
+		api['x_type'] = 'VOID'
+
+		if trans_id != None:
+			api['x_trans_id'] = trans_id
+		elif transaction.__id__ in self.trans_id_cache:
+			api['x_trans_id'] = self.trans_id_cache[ transaction.__id__ ]
+
+		return self.call( transaction, api )
