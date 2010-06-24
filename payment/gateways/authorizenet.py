@@ -89,8 +89,13 @@ class AuthorizeNetAIM_3_1( GenericGateway ):
 			api['x_method']    = 'CC'
 			api['x_amount']    = transaction.amount
 			api['x_card_num']  = transaction.card_number
-			api['x_exp_date']  = transaction.expiration_date
+			api['x_exp_date']  = transaction.expiration_date.strftime( '%m-%Y' )
 			api['x_card_code'] = transaction.card_code
+			api['x_first_name']= transaction.first_name
+			api['x_last_name'] = transaction.last_name
+			api['x_address']   = transaction.address
+			api['x_city']      = transaction.city
+			api['x_state']     = transaction.state
 			api['x_zip']       = transaction.zip_code
 		else:
 			raise PaymentMethodUnsupportedByGateway(
@@ -118,10 +123,10 @@ class AuthorizeNetAIM_3_1( GenericGateway ):
 		ccv_response = response[39]
 
 		if response[0] != '1':
-			if response[0] == '2': # Declined
-				raise ProcessingDeclined( response[3], error_code=response[2], avs_response=avs_response, ccv_response=ccv_response )
-			else: # 3 = Error, 4 = Held for review
-				raise ProcessingError( response[3], error_code=response[2] )
+			# if response[0] == '2': # Declined
+			#	raise ProcessingDeclined( response[3], error_code=response[2], avs_response=avs_response, ccv_response=ccv_response )
+			# else: # 3 = Error, 4 = Held for review
+			raise ProcessingError( response[3], error_code=int(response[2]), avs_response=avs_response, ccv_response=ccv_response  )
 
 		if response[6] != '0':
 			self.trans_id_cache[ transaction.__id__ ] = response[6] # transaction id

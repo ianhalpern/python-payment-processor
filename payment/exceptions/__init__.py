@@ -35,6 +35,6 @@ class ProcessingError( Error ):
 	"""Explains an error in processing"""
 	pass
 
-class ProcessingDeclined( Error ):
-	"""A decline on card processing"""
-	pass
+#class ProcessingDeclined( Error ):
+#	"""A decline on card processing"""
+#	pass

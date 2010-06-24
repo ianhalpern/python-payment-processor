@@ -1,0 +1,69 @@
+INSTALL:
+
+To install python-payment on a linux system run:
+
+$ sudo ./install
+
+HOW TO:
+
+Using python-payment is very straight forward.
+
+Here is a simple example using the authroize.net payment gateway. This example
+creates a authorize.net payment gateway and a credit card transaction and
+processes the transaction.
+
+####################################################
+import payment
+
+# the authorize.net gateway requires valid authorize.net 'login' and 'trans_key' variables
+g = payment.Gateway( 'authorize.net', login='XXX', trans_key='XXX' )
+
+# other authroize.net variables include 'use_test_url' which, if set,
+# will use https://test.authorize.net/ instead of https://secure.authorize.net
+# if you are using a developer account
+
+t = payment.Transaction( 'credit card', amount='20', card_number='XXX', expiration_date='XXX' )
+
+try:
+	trans_id = g.process( t )
+except ProcessingError as error:
+	# ProcessingError.error_code attribute holds the reason response code from authorize.net
+	# reference: http://www.authorize.net/support/merchant/Transaction_Response/Response_Reason_Codes_and_Response_Reason_Text.htm
+	if error.error_code == 6:
+		print 'The credit card number is invalid'
+	raise
+
+#####################################################
+
+Using payment.Gateway and payment.Transaction always take a string as the first argument which is used as
+a simple way to dynamically load a specific transaction or gateway found in payment.gateways and payment.transactions.
+
+You can easily create a custom transaction or gateway outside of the python-payment module, just create a
+class that overloads payment.gateways.GenericGateway or payment.transactions.GenericTransaction.
+
+########################################
+
+from payment.gateways import GenericGateway
+
+class MyGateway( GenericGateway )
+...
+
+#######################################
+
+You can set a transaction amount limit on a gateway which will throw an error if the gateway
+tries to process a transaction with an amount that excedes the limit. This is a simple way to
+protect against possible payment system errors.
+
+#######################################
+
+import payment
+
+g = payment.Gateway( 'authorize.net', login='XXX', trans_key='XXX', transaction_amount_limit=100 )
+t = payment.Transaction( 'credit card', amount='200', card_number='XXX', expiration_date='XXX' )
+
+try:
+	trans_id = g.process( t )
+except GatewayAmountLimitExceded:
+	print 'Transaction amount was to high'
+
+#######################################
