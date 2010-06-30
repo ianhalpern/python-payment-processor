@@ -105,6 +105,9 @@ class AuthorizeNetAIM_3_1( GenericGateway ):
 		request  = urllib2.Request( self.url, post_str )
 		response = urllib2.urlopen( request ).read().split( api['x_delim_char'] )
 
+		if response[6] != '0':
+			self.trans_id_cache[ transaction.__id__ ] = response[6] # transaction id
+
 		# A = Address (Street) matches, ZIP does not
 		# B = Address information not provided for AVS check
 		# E = AVS errorG = Non-U.S. Card Issuing Bank
@@ -121,15 +124,15 @@ class AuthorizeNetAIM_3_1( GenericGateway ):
 
 		# M = Match, N = No Match, P = Not Processed, S = Should have been present, U = Issuer unable to process request
 		ccv_response = response[39]
-
+		#print response[0], response[2]
 		if response[0] != '1':
+			#print api
 			# if response[0] == '2': # Declined
 			#	raise ProcessingDeclined( response[3], error_code=response[2], avs_response=avs_response, ccv_response=ccv_response )
 			# else: # 3 = Error, 4 = Held for review
-			raise ProcessingError( response[3], error_code=int(response[2]), avs_response=avs_response, ccv_response=ccv_response  )
+			raise ProcessingError( response[3] + "(error %s)" % response[2],
+				error_code=int(response[2]), avs_response=avs_response, ccv_response=ccv_response )
 
-		if response[6] != '0':
-			self.trans_id_cache[ transaction.__id__ ] = response[6] # transaction id
 		return response[6]
 
 	def process( self, transaction ):
