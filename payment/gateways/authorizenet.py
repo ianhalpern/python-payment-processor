@@ -67,7 +67,7 @@ class AuthorizeNetAIM_3_1( GenericGateway ):
 
 	trans_id_cache = None
 
-	def __init__( self, login=None, trans_key=None, use_test_url=False, **kwargs ):
+	def __init__( self, login=None, trans_key=None, use_test_url=False, enable_test_requests=False, **kwargs ):
 		GenericGateway.__init__( self, **kwargs )
 
 		if not login or not trans_key:
@@ -76,6 +76,9 @@ class AuthorizeNetAIM_3_1( GenericGateway ):
 
 		if use_test_url:
 			self.url = URL_TEST
+
+		if enable_test_requests:
+			self.api['x_test_request'] = 'TRUE'
 
 		self.trans_id_cache = {}
 
