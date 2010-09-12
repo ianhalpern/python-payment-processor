@@ -3,20 +3,8 @@ class Error( Exception ):
 		for key, val in kwargs.items(): setattr( self, key, val )
 		Exception.__init__( self, reason )
 
-class GatewayInitializeError( Error ):
-	"""Exception raised when a gateway cannot be initialized"""
-	pass
-
-class TransactionInitializeError( Error ):
-	"""Exception raised when a transaction cannot be initialized"""
-	pass
-
 class NoGatewayError( Error ):
 	"""Exception raised when the specified gateway does not exist"""
-	pass
-
-class NoTransactionError( Error ):
-	"""Exception raised when the specified transaction does not exist"""
 	pass
 
 class GatewayAmountLimitExceded( Error ):
@@ -26,15 +14,40 @@ class PaymentMethodUnsupportedByGateway( Error ):
 	"""Exception raised when the transaction method is unsupported by the gateway"""
 	pass
 
-class MethodUndefinedError( Error ):
-	"""Raised when a method is called by a class that hasn't implemented the
-	method yet"""
+class TransactionStatusError( Error ):
+	"""Raised when a gateway cannot execute the desired payment function because of the payment's transaction status"""
 	pass
 
-class ProcessingError( Error ):
-	"""Explains an error in processing"""
+class TransactionFailed( Error ):
+	"""Explains any undefined error when processing a transaction"""
 	pass
 
-#class ProcessingDeclined( Error ):
-#	"""A decline on card processing"""
-#	pass
+class TransactionDeclined( Error ):
+	"""Raised when a transaction was declined though all fields were entered correctly, usually a result of insufficient funds."""
+	pass
+
+# All specific errors should be restricted to invalid user inputted fields
+# that the developer cannot check beforehand like credit card number
+# any other errors will be lumped into TransactionFailed
+
+class InvalidCardNumber( Error ):
+	pass
+
+class InvalidCardExpirationDate( Error ):
+	pass
+
+class InvalidCardCode( Error ):
+	pass
+
+class InvalidRoutingNumber( Error ):
+	pass
+
+class InvalidAccountNumber( Error ):
+	pass
+
+class InvalidBillingAddress( Error ):
+	pass
+
+class InvalidBillingZipcode( Error ):
+	pass
+
