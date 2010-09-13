@@ -1,4 +1,4 @@
-from payment.exceptions   import *
+from payment_processor.exceptions   import *
 import datetime
 
 class GenericMethod:

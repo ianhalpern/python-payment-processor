@@ -1,8 +1,8 @@
 # Authorize.net gateways
 
-from payment.gateways   import GenericGateway
-from payment.exceptions import *
-import payment.methods
+from payment_processor.gateways   import GenericGateway
+from payment_processor.exceptions import *
+import payment_processor.methods
 
 URL_STANDARD = 'https://secure.authorize.net/gateway/transact.dll'
 URL_TEST     = 'https://test.authorize.net/gateway/transact.dll'
@@ -120,63 +120,156 @@ class AuthorizeNetAIM_3_1( GenericGateway ):
 		self.api['x_login']    = login
 		self.api['x_tran_key'] = trans_key
 
+	@GenericGateway.checkTransactionStatus
 	def process( self, transaction ):
 		api = self.newAPI()
 
-		if transaction.trans_id:
-			raise TransactionStatusError( "The payment has already been authorized, call Payment.capture instead." )
-
 		api['x_type'] = 'AUTH_CAPTURE'
+
+		self.populateAPI( transaction, api )
 
 		return self.call( transaction, api )
 
+	@GenericGateway.checkTransactionStatus
 	def authorize( self, transaction ):
 		api = self.newAPI()
 
-		if transaction.trans_id:
-			raise TransactionStatusError( "The payment has already been authorized, call Payment.capture instead." )
-
 		api['x_type'] = 'AUTH_ONLY'
 
-		return self.call( transaction, api )
-
-	def capture( self, transaction, auth_code=None ):
-		api = self.newAPI()
-		api['x_type'] = 'CAPTURE_ONLY'
-
-		if auth_code != None:
-			api['x_auth_code'] = auth_code
-		elif transaction.trans_id:
-			api['x_type'] = 'PRIOR_AUTH_CAPTURE'
-			api['x_trans_id'] = transaction.trans_id
-		else:
-			raise TransactionStatusError( "The payment has not been authorized, call Payment.authorize or Payment.process instead." )
+		self.populateAPI( transaction, api )
 
 		return self.call( transaction, api )
 
-	def refund( self, transaction, trans_id=None ):
+	@GenericGateway.checkTransactionStatus
+	def capture( self, transaction ):
 		api = self.newAPI()
-		api['x_type'] = 'CREDIT'
 
-		if transaction.trans_id:
-			api['x_trans_id'] = transaction.trans_id
-		else:
-			raise TransactionStatusError( "The payment requires a trans_id to process a refund." )
+		#if auth_code != None:
+		#	api['x_type'] = 'CAPTURE_ONLY'
+		#	api['x_auth_code'] = auth_code
 
-		return self.call( transaction, api )
-
-	def void( self, payment ):
-		api = self.newAPI()
-		api['x_type'] = 'VOID'
-
-		if not transaction.trans_id:
-			raise TransactionStatusError( "The payment has already been authorized, there is no need to void it." )
-
+		api['x_type']     = 'PRIOR_AUTH_CAPTURE'
 		api['x_trans_id'] = transaction.trans_id
 
 		return self.call( transaction, api )
 
+	@GenericGateway.checkTransactionStatus
+	def void( self, transaction ):
+		api = self.newAPI()
+
+		api['x_type']     = 'VOID'
+		api['x_trans_id'] = transaction.trans_id
+
+		return self.call( transaction, api )
+
+	@GenericGateway.checkTransactionStatus
+	def refund( self, transaction ):
+		api = self.newAPI()
+
+		api['x_type']     = 'CREDIT'
+		api['x_trans_id'] = transaction.trans_id
+
+		self.populateAPI( transaction, api )
+
+		return self.call( transaction, api )
+
 	def call( self, transaction, api ):
+
+		response = GenericGateway.call( self, api ).split( api['x_delim_char'] )
+		print response
+		## Response ##
+		#  0 - Response Code: 1 = Approved, 2 = Declined, 3 = Error, 4 = Held for Review
+		#  1 - Response Subcode
+		#  2 - Response Reason Code = http://developer.authorize.net/guides/AIM/Transaction_Response/Response_Reason_Codes_and_Response_Reason_Text.htm
+		#  3 - Response Reason Text
+		#  4 - Authorization Code
+		#  5 - AVS Response
+		#  6 - Transaction ID
+		#  7 - Invoice Number
+		#  8 - Description
+		#  9 - Amount
+		# 10 - Method
+		# 11 - Transaction Type
+		# 12 - 23 - Customer ID, First Name, Last Name, Company, Address, City, Sate, Zip, Country, Phone, Fax, Email
+		# 24 - 31 - Ship First Name, Last Name, Company, Address, City, State, Zip, Country
+		# 32 - Tax
+		# 33 - Duty
+		# 34 - Freight
+		# 35 - Tax Exempt
+		# 36 - Purchase Order Number
+		# 37 - MD5 Hash
+		# 38 - CCV Response
+		# 39 - CAVV Response
+		# 40 - Account Number
+		# 41 - Card Type
+		# 42 - Split Tender ID
+		# 43 - Requested Amount
+		# 44 - Balance on Card
+
+
+		response_code = int(response[2])
+		response_text = response[3] + " (code %s)" % response_code
+
+		transaction.last_response_text = response_text
+
+		if response[6] != '0':
+			transaction.trans_id = response[6] # transaction id
+
+		## AVS Response Code Values ##
+		# A = Address (Street) matches, ZIP does not
+		# B = Address information not provided for AVS check
+		# E = AVS errorG = Non-U.S. Card Issuing Bank
+		# N = No Match on Address (Street) or ZIP
+		# P = AVS not applicable for this transaction
+		# R = Retry - System unavailable or timed out
+		# S = Service not supported by issuer
+		# U = Address information is unavailable
+		# W = Nine digit ZIP matches, Address (Street) does not
+		# X = Address (Street) and nine digit ZIP match
+		# Y = Address (Street) and five digit ZIP match
+		# Z = Five digit ZIP matches, Address (Street) does not
+		avs_response = response[5]
+
+		# M = Match, N = No Match, P = Not Processed, S = Should have been present, U = Issuer unable to process request
+		ccv_response = response[39]
+		#print response[0], response[2]
+
+		if response[0] != '1':
+
+			if response_code in ( 6, 37, 200, 315 ):
+				raise InvalidCardNumber( response_text, response_code=response_code )
+
+			if response_code in ( 7, 8, 202, 316, 317 ):
+				raise InvalidCardExpirationDate( response_text, response_code=response_code )
+
+			if response_code in ( 44, 45, 65 ):
+				raise InvalidCardCode( response_text, response_code=response_code )
+
+			if response_code in ( 9, ):
+				raise InvalidRoutingNumber( response_text, response_code=response_code )
+
+			if response_code in ( 10, ):
+				raise InvalidAccountNumber( response_text, response_code=response_code )
+
+			if response_code in ( 27, 127, 290 ):
+				if avs_response in ( 'A', ):
+					raise InvalidBillingZipcode( response_text, response_code=response_code, avs_response=avs_response )
+
+				raise InvalidBillingAddress( response_text, response_code=response_code, avs_response=avs_response )
+
+			if response_code in ( 2, 3, 4, 41, 250, 251 ):
+				raise TransactionDeclined( response_text, response_code=response_code )
+			#print api
+			# if response[0] == '2': # Declined
+			#	raise ProcessingDeclined( response[3], error_code=response[2], avs_response=avs_response, ccv_response=ccv_response )
+			# else: # 3 = Error, 4 = Held for review
+
+			raise TransactionFailed( response_text, response_code=response_code )
+
+		return response_text
+
+	def populateAPI( self, transaction, api ):
+		api['x_trans_id']    = transaction.trans_id
 		api['x_amount']      = transaction.payment.amount
 
 		api['x_first_name']  = transaction.method.first_name
@@ -194,6 +287,7 @@ class AuthorizeNetAIM_3_1( GenericGateway ):
 		api['x_email']       = transaction.method.email
 
 		api['x_customer_ip'] = transaction.payment.ip
+		api['x_cust_id']     = transaction.payment.customer_id
 		api['x_invoice_num'] = transaction.payment.order_number
 		api['x_description'] = transaction.payment.description
 
@@ -234,91 +328,3 @@ class AuthorizeNetAIM_3_1( GenericGateway ):
 		else:
 			raise PaymentMethodUnsupportedByGateway(
 			  "Payment Method '%s' is unsupported by authorize.net AIM 3.1 gateway." % transaction.method.__class__.__name__ )
-
-		response = GenericGateway.call( self, api ).split( api['x_delim_char'] )
-		print response
-		## Response ##
-		#  0 - Response Code: 1 = Approved, 2 = Declined, 3 = Error, 4 = Held for Review
-		#  1 - Response Subcode
-		#  2 - Response Reason Code = http://developer.authorize.net/guides/AIM/Transaction_Response/Response_Reason_Codes_and_Response_Reason_Text.htm
-		#  3 - Response Reason Text
-		#  4 - Authorization Code
-		#  5 - AVS Response
-		#  6 - Transaction ID
-		#  7 - Invoice Number
-		#  8 - Description
-		#  9 - Amount
-		# 10 - Method
-		# 11 - Transaction Type
-		# 12 - 23 - Customer ID, First Name, Last Name, Company, Address, City, Sate, Zip, Country, Phone, Fax, Email
-		# 24 - 31 - Ship First Name, Last Name, Company, Address, City, State, Zip, Country
-		# 32 - Tax
-		# 33 - Duty
-		# 34 - Freight
-		# 35 - Tax Exempt
-		# 36 - Purchase Order Number
-		# 37 - MD5 Hash
-		# 38 - CCV Response
-		# 39 - CAVV Response
-		# 40 - Account Number
-		# 41 - Card Type
-		# 42 - Split Tender ID
-		# 43 - Requested Amount
-		# 44 - Balance on Card
-
-		if response[6] != '0':
-			transaction.trans_id = response[6] # transaction id
-
-		## AVS Response Code Values ##
-		# A = Address (Street) matches, ZIP does not
-		# B = Address information not provided for AVS check
-		# E = AVS errorG = Non-U.S. Card Issuing Bank
-		# N = No Match on Address (Street) or ZIP
-		# P = AVS not applicable for this transaction
-		# R = Retry - System unavailable or timed out
-		# S = Service not supported by issuer
-		# U = Address information is unavailable
-		# W = Nine digit ZIP matches, Address (Street) does not
-		# X = Address (Street) and nine digit ZIP match
-		# Y = Address (Street) and five digit ZIP match
-		# Z = Five digit ZIP matches, Address (Street) does not
-		avs_response = response[5]
-
-		# M = Match, N = No Match, P = Not Processed, S = Should have been present, U = Issuer unable to process request
-		ccv_response = response[39]
-		#print response[0], response[2]
-
-		response_code = int(response[2])
-		response_text = response[3] + " (code %s)" % response_code
-
-		if response[0] != '1':
-
-			if response_code in ( 6, 37, 200, 315 ):
-				raise InvalidCardNumber( response_text, response_code=response_code )
-
-			if response_code in ( 7, 8, 202, 316, 317 ):
-				raise InvalidCardExpirationDate( response_text, response_code=response_code )
-
-			if response_code in ( 44, 45, 65 ):
-				raise InvalidCardCode( response_text, response_code=response_code )
-
-			if response_code in ( 9, ):
-				raise InvalidRoutingNumber( response_text, response_code=response_code )
-
-			if response_code in ( 10, ):
-				raise InvalidAccountNumber( response_text, response_code=response_code )
-
-			if response_code in ( 27, 127, 290 ):
-				if avs_response in ( 'A', ):
-					raise InvalidBillingZipcode( response_text, response_code=response_code, avs_response=avs_response )
-
-				raise InvalidBillingAddress( response_text, response_code=response_code, avs_response=avs_response )
-
-			if error_code in ( 2, 3, 4, 41, 250, 251 ):
-				raise TransactionDeclined( response_text, response_code=response_code )
-			#print api
-			# if response[0] == '2': # Declined
-			#	raise ProcessingDeclined( response[3], error_code=response[2], avs_response=avs_response, ccv_response=ccv_response )
-			# else: # 3 = Error, 4 = Held for review
-
-			raise TransactionFailed( response_text, response_code=response_code )

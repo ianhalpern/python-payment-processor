@@ -1,69 +1,110 @@
+Python Payment Processor - (c) Ian Halpern 2010
+
+Python Payment Processor is a library for python that acts as a simple abstraction around various payment methods and payment gateways. It includes support for standard gateways such as Authorize.net and is always working to expand it's supported gateway repertoire. Python Payment is currently being used in production systems transferring tens of thousands of dollars a month.
+
+Python Payment Processor is released under the MIT license.
+
+*A special thanks to Brandon Stoner for collaborating on the initial concept design.
+
 INSTALL:
 
-To install python-payment on a linux system run:
+To install python-payment-processor on a linux system run:
 
-$ sudo ./install
+$ sudo ./setup.py install
 
 HOW TO:
 
-Using python-payment is very straight forward.
+Using python-payment-processor is very straight forward.
 
 Here is a simple example using the authroize.net payment gateway. This example
 creates a authorize.net payment gateway and a credit card transaction and
 processes the transaction.
 
-####################################################
-import payment
+----------------------------------------------------
+import payment_processor
+from payment_processor.exceptions import *
 
 # the authorize.net gateway requires valid authorize.net 'login' and 'trans_key' variables
-g = payment.Gateway( 'authorize.net', login='XXX', trans_key='XXX' )
+gateway = payment_processor.Gateway( 'authorize.net', login='XXX', trans_key='XXX' )
 
 # other authroize.net variables include 'use_test_url' which, if set,
 # will use https://test.authorize.net/ instead of https://secure.authorize.net
 # if you are using a developer account
 
-t = payment.Transaction( 'credit card', amount='20', card_number='XXX', expiration_date='XXX' )
+card = payment_processor.methods.CreditCard(
+	card_number=4011111111111111,
+	expiration_date=datetime.datetime( 2014, 1, 1 ),
+	first_name='First',
+	last_name='Last',
+	zip_code='10001',
+	address='1 Somewhere Ave',
+	city='New York',
+	state='NY'
+)
+
+payment = payment_processor.PaymentInfo(
+	amount = 20,
+	customer_id = 1,
+	order_number = '43DJ-7203-D897-SS97',
+	ship_first_name = 'First',
+	ship_last_name = 'Last',
+	ship_address = '1 Somewhere Ave',
+	ship_city = 'New York',
+	ship_state = 'NY',
+	ship_email = 'email@example.com',
+	ship_phone = '222-333-4444',
+	ip = '65.192.14.10',
+	description = 'Some Order'
+)
+
+t = payment_processor.Transaction( payment=payment, method=card, gateway=gateway )
 
 try:
-	trans_id = g.process( t )
-except ProcessingError as error:
-	# ProcessingError.error_code attribute holds the reason response code from authorize.net
-	# reference: http://www.authorize.net/support/merchant/Transaction_Response/Response_Reason_Codes_and_Response_Reason_Text.htm
-	if error.error_code == 6:
-		print 'The credit card number is invalid'
+	g.process( t )
+except TransactionDeclined:
+	# The transaction requested was declined for such reasons as insufficient funds or flagged for fraud.
+	raise
+except InvalidCardNumber:
+	# The credit card number provided was invalid.
+	raise
+except InvalidCardExpirationDate:
+	# The credit card expiration date provided was invalid.
+	raise
+except InvalidCardCode:
+	# The credit card code provided was invalid.
+	raise
+except InvalidRoutingNumber:
+	# The routing number provided was invalid (only applicable to Check methods).
+	raise
+except InvalidAccountNumber:
+	# The account number provided was invalid (only applicable to Check methods).
+	raise
+except InvalidBillingAddress:
+	# The billing address provided was invalid.
+	raise
+except InvalidBillingZipcode:
+	# The billing zipcode provided was invalid.
+	raise
+except TransactionAmountLimitExceeded:
+	# The per-transaction limit was exceeded.
+	raise
+except TransactionFailed:
+	# The transaction failed for other reasons usually relating using python-payment in ways unsupported by the gateway.
 	raise
 
-#####################################################
+----------------------------------------------------
 
-Using payment.Gateway and payment.Transaction always take a string as the first argument which is used as
-a simple way to dynamically load a specific transaction or gateway found in payment.gateways and payment.transactions.
+Using payment.Gateway always take a string as the first argument which is used as
+a simple way to dynamically load a specific gateway found in payment.gateways.
 
-You can easily create a custom transaction or gateway outside of the python-payment module, just create a
-class that overloads payment.gateways.GenericGateway or payment.transactions.GenericTransaction.
+You can easily create a gateway outside of the python-payment module, just create a
+class that overloads payment.gateways.GenericGateway.
 
-########################################
+----------------------------------------------------
 
-from payment.gateways import GenericGateway
+from payment_processor.gateways import GenericGateway
 
 class MyGateway( GenericGateway )
 ...
 
-#######################################
-
-You can set a transaction amount limit on a gateway which will throw an error if the gateway
-tries to process a transaction with an amount that excedes the limit. This is a simple way to
-protect against possible payment system errors.
-
-#######################################
-
-import payment
-
-g = payment.Gateway( 'authorize.net', login='XXX', trans_key='XXX', transaction_amount_limit=100 )
-t = payment.Transaction( 'credit card', amount='200', card_number='XXX', expiration_date='XXX' )
-
-try:
-	trans_id = g.process( t )
-except GatewayAmountLimitExceded:
-	print 'Transaction amount was to high'
-
-#######################################
+----------------------------------------------------

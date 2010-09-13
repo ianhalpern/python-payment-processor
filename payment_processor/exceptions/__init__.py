@@ -14,10 +14,6 @@ class PaymentMethodUnsupportedByGateway( Error ):
 	"""Exception raised when the transaction method is unsupported by the gateway"""
 	pass
 
-class TransactionStatusError( Error ):
-	"""Raised when a gateway cannot execute the desired payment function because of the payment's transaction status"""
-	pass
-
 class TransactionFailed( Error ):
 	"""Explains any undefined error when processing a transaction"""
 	pass

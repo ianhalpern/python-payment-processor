@@ -1,8 +1,8 @@
 # NationalProcessing gateway
 
-from payment.gateways   import GenericGateway
-from payment.exceptions import *
-import payment.methods
+from payment_processor.gateways   import GenericGateway
+from payment_processor.exceptions import *
+import payment_processor.methods
 import urlparse
 
 class NationalProcessing( GenericGateway ):
@@ -79,58 +79,123 @@ class NationalProcessing( GenericGateway ):
 		GenericGateway.__init__( self, **kwargs )
 
 		if not username or not password:
-			raise GatewayInitializeError(
+			raise TypeError(
 			  "The National Processing gateway requires both a 'username' and 'password' argument." )
 
 		self.api['username'] = username
 		self.api['password'] = password
 
+	@GenericGateway.checkTransactionStatus
 	def process( self, transaction ):
 		api = self.newAPI()
 
-		if transaction.trans_id:
-			raise TransactionStatusError( "The transaction has already been authorized, call Transaction.capture instead." )
-
 		api['type'] = 'sale'
+
+		self.populateAPI( transaction, api )
 
 		return self.call( transaction, api )
 
+	@GenericGateway.checkTransactionStatus
 	def authorize( self, transaction ):
 		api = self.newAPI()
 
 		api['type'] = 'auth'
 
+		self.populateAPI( transaction, api )
+
 		return self.call( transaction, api )
 
+	@GenericGateway.checkTransactionStatus
 	def capture( self, transaction ):
+		if not transaction.payment.amount:
+			raise ValueError( "National Processing's capture() requires a transaction with a defined payment amount." )
+
 		api = self.newAPI()
 
-		api['type'] = 'capture'
+		api['type']          = 'capture'
+		api['transactionid'] = transaction.trans_id
+		api['amount']        = transaction.payment.amount
+		api['orderid']       = transaction.payment.order_number
 
 		return self.call( transaction, api )
 
+	@GenericGateway.checkTransactionStatus
 	def void( self, transaction ):
 		api = self.newAPI()
 
-		api['type'] = 'void'
+		api['type']          = 'void'
+		api['transactionid'] = transaction.trans_id
 
 		return self.call( transaction, api )
 
+	@GenericGateway.checkTransactionStatus
 	def refund( self, transaction ):
 		api = self.newAPI()
 
-		api['type'] = 'refund'
+		api['type']          = 'refund'
+		api['transactionid'] = transaction.trans_id
+		api['amount']        = transaction.payment.amount
 
 		return self.call( transaction, api )
 
+	@GenericGateway.checkTransactionStatus
 	def update( self, transaction ):
 		api = self.newAPI()
 
-		api['type'] = 'update'
+		api['type']          = 'update'
+		api['transactionid'] = transaction.trans_id
+		api['orderid']       = transaction.payment.order_number
 
 		return self.call( transaction, api )
 
 	def call( self, transaction, api ):
+
+		response = urlparse.parse_qs( GenericGateway.call( self, api ) )
+
+		response_code = int( response['response_code'][0] )
+		response_text = response['responsetext'][0] + " (code %s)" % response_code
+
+		print response
+		if 'transactionid' in response:
+			transaction.trans_id = response['transactionid'][0]
+
+		transaction.last_response_text = response_text
+
+		if response['response'][0] != '1':
+
+			if response_code in ( 221, 222 ) or response_text.startswith('Invalid Credit Card Number'):
+				raise InvalidCardNumber( response_text, response_code=response_code )
+
+			if response_code in ( 223, 224 ):
+				raise InvalidCardExpirationDate( response_text, response_code=response_code )
+
+			if response_code in ( 225, ):
+				raise InvalidCardCode( response_text, response_code=response_code )
+
+			if response_text.startswith('Invalid ABA number'):
+				raise InvalidRoutingNumber( response_text, response_code=response_code )
+
+			if response_code in ( 0, ):
+				raise InvalidAccountNumber( response_text, response_code=response_code )
+
+			if 'avsresponse' in response and response['avsresponse'][0] in ( 'A', 'B', 'W', 'Z', 'P', 'L', 'N' ):
+				if avs_response in ( 'A', ):
+					raise InvalidBillingZipcode( response_text, response_code=response_code, avs_response=avs_response )
+
+				raise InvalidBillingAddress( response_text, response_code=response_code, avs_response=avs_response )
+
+			if response_code in ( 240, 250, 251, 252, 253, 260, 261, 262, 263, 264 ):
+				raise TransactionDeclined( response_text, response_code=response_code )
+			#print api
+			# if response[0] == '2': # Declined
+			#	raise ProcessingDeclined( response[3], error_code=response[2], avs_response=avs_response, ccv_response=ccv_response )
+			# else: # 3 = Error, 4 = Held for review
+
+			raise TransactionFailed( response_text, response_code=response_code )
+
+		return response_text
+
+	def populateAPI( self, transaction, api ):
 		api['amount']    = transaction.payment.amount
 		api['firstname'] = transaction.method.first_name
 		api['lastname']  = transaction.method.last_name
@@ -176,44 +241,3 @@ class NationalProcessing( GenericGateway ):
 		else:
 			raise PaymentMethodUnsupportedByGateway(
 			  "Payment Method '%s' is unsupported by authorize.net AIM 3.1 gateway." % transaction.method.__class__.__name__ )
-
-		response = urlparse.parse_qs( GenericGateway.call( self, api ) )
-
-		print response
-		if 'transactionid' in response:
-			transaction.trans_id = response['transactionid'][0]
-
-		response_code = int( response['response_code'][0] )
-		response_text = response['responsetext'][0] + " (code %s)" % response_code
-
-		if response['response'][0] != '1':
-
-			if response_code in ( 221, 222 ) or response_text.startswith('Invalid Credit Card Number'):
-				raise InvalidCardNumber( response_text, response_code=response_code )
-
-			if response_code in ( 223, 224 ):
-				raise InvalidCardExpirationDate( response_text, response_code=response_code )
-
-			if response_code in ( 225, ):
-				raise InvalidCardCode( response_text, response_code=response_code )
-
-			if response_text.startswith('Invalid ABA number'):
-				raise InvalidRoutingNumber( response_text, response_code=response_code )
-
-			if response_code in ( 0, ):
-				raise InvalidAccountNumber( response_text, response_code=response_code )
-
-			if 'avsresponse' in response and response['avsresponse'][0] in ( 'A', 'B', 'W', 'Z', 'P', 'L', 'N' ):
-				if avs_response in ( 'A', ):
-					raise InvalidBillingZipcode( response_text, response_code=response_code, avs_response=avs_response )
-
-				raise InvalidBillingAddress( response_text, response_code=response_code, avs_response=avs_response )
-
-			if response_code in ( 240, 250, 251, 252, 253, 260, 261, 262, 263, 264 ):
-				raise TransactionDeclined( response_text, response_code=response_code )
-			#print api
-			# if response[0] == '2': # Declined
-			#	raise ProcessingDeclined( response[3], error_code=response[2], avs_response=avs_response, ccv_response=ccv_response )
-			# else: # 3 = Error, 4 = Held for review
-
-			raise TransactionFailed( response_text, response_code=response_code )
