@@ -220,14 +220,14 @@ class NationalProcessing( GenericGateway ):
 		api['shipping_zip']       = transaction.payment.ship_zip_code
 		api['shipping_email']     = transaction.payment.ship_email
 
-		if transaction.method.__class__ == payment.methods.CreditCard:
+		if transaction.method.__class__ == payment_processor.methods.CreditCard:
 
 			api['payment']   = 'creditcard'
 			api['ccnumber']  = transaction.method.card_number
 			api['ccexp']     = transaction.method.expiration_date.strftime( '%m-%Y' )
 			api['cvv']       = transaction.method.card_code
 
-		elif transaction.method.__class__ == payment.methods.Check:
+		elif transaction.method.__class__ == payment_processor.methods.Check:
 
 			api['payment']      = 'check'
 			api['checkname']    = transaction.method.company \

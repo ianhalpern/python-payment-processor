@@ -74,7 +74,7 @@ class GenericGateway( object ):
 	def checkAmountLimit( method ):
 		def amountLimitChecker( self, transaction, **kwargs ):
 			if self.transaction_amount_limit != None and transaction.payment.amount > self.transaction_amount_limit:
-				raise GatewayAmountLimitExceded(
+				raise TransactionAmountLimitExceeded(
 				  "The transaction amount of '%d' excedes the gateway's limit of '%d' per transaction" %
 				  ( transaction.payment.amount, self.transaction_amount_limit ) )
 

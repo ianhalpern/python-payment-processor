@@ -3,7 +3,7 @@ from payment_processor.exceptions import *
 from payment_processor import methods
 
 class Gateway( object ):
-	'''The Gateway class is a wrapper around the gateways found in payment.gateways. It should be
+	'''The Gateway class is a wrapper around the gateways found in payment_processor.gateways. It should be
 	called with the name of the gateway as the first paramater. example: Gateway( 'authorize.net' )'''
 
 	gateway = None
@@ -13,7 +13,7 @@ class Gateway( object ):
 		gateway_modulename = gateway_classname.lower()
 
 		try:
-			module = __import__( 'payment.gateways.%s' % gateway_modulename, fromlist=[ gateway_modulename ] )
+			module = __import__( 'payment_processor.gateways.%s' % gateway_modulename, fromlist=[ gateway_modulename ] )
 			self.gateway = getattr( module, gateway_classname )( *args, **kwargs )
 		except ImportError, AttributeError:
 			raise NoGatewayError

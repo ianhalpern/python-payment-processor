@@ -60,7 +60,7 @@ payment = payment_processor.PaymentInfo(
 t = payment_processor.Transaction( payment=payment, method=card, gateway=gateway )
 
 try:
-	g.process( t )
+	t.process()
 except TransactionDeclined:
 	# The transaction requested was declined for such reasons as insufficient funds or flagged for fraud.
 	raise

@@ -7,7 +7,7 @@ class NoGatewayError( Error ):
 	"""Exception raised when the specified gateway does not exist"""
 	pass
 
-class GatewayAmountLimitExceded( Error ):
+class TransactionAmountLimitExceeded( Error ):
 	pass
 
 class PaymentMethodUnsupportedByGateway( Error ):
@@ -47,3 +47,6 @@ class InvalidBillingAddress( Error ):
 class InvalidBillingZipcode( Error ):
 	pass
 
+AllFailedTransactionErrors = ( TransactionDeclined, InvalidCardNumber, InvalidCardExpirationDate,
+							   InvalidCardCode, InvalidRoutingNumber, InvalidAccountNumber, InvalidBillingAddress,
+							   InvalidBillingZipcode, TransactionAmountLimitExceeded, TransactionFailed )

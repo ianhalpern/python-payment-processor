@@ -302,14 +302,15 @@ class AuthorizeNetAIM_3_1( GenericGateway ):
 		api['x_ship_to_zip']        = transaction.payment.ship_zip_code
 		api['x_ship_to_country']    = transaction.payment.ship_country
 
-		if transaction.method.__class__ == payment.methods.CreditCard:
+		print transaction.method.__class__
+		if transaction.method.__class__ == payment_processor.methods.CreditCard:
 
 			api['x_method']    = 'CC'
 			api['x_card_num']  = transaction.method.card_number
 			api['x_exp_date']  = transaction.method.expiration_date.strftime( '%m-%Y' )
 			api['x_card_code'] = transaction.method.card_code
 
-		elif transaction.method.__class__ == payment.methods.Check:
+		elif transaction.method.__class__ == payment_processor.methods.Check:
 
 			api['x_bank_aba_code'] = transaction.method.routing_number
 			api['x_bank_acct_num'] = transaction.method.account_number
@@ -318,8 +319,8 @@ class AuthorizeNetAIM_3_1( GenericGateway ):
 								  or ( transaction.method.first_name or '' ) \
 								  + ( ' ' + transaction.method.last_name if transaction.method.last_name else '' )
 
-			api['x_bank_acct_name'] = 'CHECKING' if transaction.method.account_type == payment.methods.Check.CHECKING else 'SAVINGS'
-			if transaction.method.account_holder_type == payment.methods.Check.BUSINESS:
+			api['x_bank_acct_name'] = 'CHECKING' if transaction.method.account_type == payment_processor.methods.Check.CHECKING else 'SAVINGS'
+			if transaction.method.account_holder_type == payment_processor.methods.Check.BUSINESS:
 				api['x_bank_acct_name'] = 'BUSINESS' + api['x_bank_acct_name']
 
 			api['x_echeck_type'] = 'WEB'
