@@ -85,7 +85,7 @@ class Check( GenericMethod ):
 			raise TypeError(
 			  "Check method requires both an 'account_number' and 'routing_number' argument." )
 
-		if ( not self.first_name or not self.last_name ) and not self.company:
+		if not ( self.first_name and self.last_name ) and not self.company:
 			raise TypeError(
 			  "Check method requires either 'first_name' and 'last_name' arguments or 'company' argument." )
 
