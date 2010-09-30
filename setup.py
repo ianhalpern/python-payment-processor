@@ -9,5 +9,11 @@ setup(
 	author_email = 'ian@ian-halpern.com',
 	url          = 'https://launchpad.net/python-payment',
 	download_url = 'https://launchpad.net/python-payment/+download',
-	packages     = ( 'payment_processor', 'payment_processor.gateways', 'payment_processor.methods', 'payment_processor.exceptions' )
+	packages     = (
+		'payment_processor',
+		'payment_processor.gateways',
+		'payment_processor.methods',
+		'payment_processor.exceptions',
+		'payment_processor.utils'
+	)
 )

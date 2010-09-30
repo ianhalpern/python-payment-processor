@@ -2,30 +2,33 @@ from payment_processor.gateways import GenericGateway
 
 class DummyGateway( GenericGateway ):
 
-	@GenericGateway.checkTransactionStatus
-	def process( self, transaction ):
+	def handleResponse( self, transaction ):
 		pass
 
 	@GenericGateway.checkTransactionStatus
-	def authorize( self, transaction ):
-		pass
+	def process( self, transaction, callback=None, async=False ):
+		if callback: callback( transaction )
 
 	@GenericGateway.checkTransactionStatus
-	def capture( self, transaction ):
-		pass
+	def authorize( self, transaction, callback=None, async=False ):
+		if callback: callback( transaction )
 
 	@GenericGateway.checkTransactionStatus
-	def void( self, transaction ):
-		pass
+	def capture( self, transaction, callback=None, async=False ):
+		if callback: callback( transaction )
 
 	@GenericGateway.checkTransactionStatus
-	def refund( self, transaction ):
-		pass
+	def void( self, transaction, callback=None, async=False ):
+		if callback: callback( transaction )
 
 	@GenericGateway.checkTransactionStatus
-	def credit( self, transaction ):
-		pass
+	def refund( self, transaction, callback=None, async=False ):
+		if callback: callback( transaction )
 
 	@GenericGateway.checkTransactionStatus
-	def update( self, transaction ):
-		pass
+	def credit( self, transaction, callback=None, async=False ):
+		if callback: callback( transaction )
+
+	@GenericGateway.checkTransactionStatus
+	def update( self, transaction, callback=None, async=False ):
+		if callback: callback( transaction )

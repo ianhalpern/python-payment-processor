@@ -16,7 +16,7 @@ class Gateway( object ):
 			module = __import__( 'payment_processor.gateways.%s' % gateway_modulename, fromlist=[ gateway_modulename ] )
 			self.gateway = getattr( module, gateway_classname )( *args, **kwargs )
 		except ImportError, AttributeError:
-			raise NoGatewayError
+			raise NoGatewayError( "No gateway by the name '%s' exists." % gateway_name )
 
 	def __getattr__( self, value ):
 		return getattr( self.__dict__['gateway'], value )
@@ -67,15 +67,20 @@ class Transaction( object ):
 	REFUNDED   = 'refunded'
 
 	status  = None
+	status_pending = None
 
-	order   = None
+	payment = None
 	method  = None
 	gateway = None
 
 	trans_id = None
+	last_response = None
 	last_response_text = None
 
-	def __init__( self, payment, method, gateway, status=PENDING, trans_id=None ):
+	async = None
+	callback = None
+
+	def __init__( self, payment, method, gateway, status=PENDING, trans_id=None, callback=None, async=False ):
 		self.payment = payment
 		self.method  = method
 		self.gateway = gateway
@@ -83,31 +88,38 @@ class Transaction( object ):
 		self.status   = status
 		self.trans_id = trans_id
 
+		self.async = async
+		self.callback = callback or self.__class__.handleResponse
+
+	def handleResponse( self ):
+		self.gateway.handleResponse( self )
+		self.status = self.status_pending
+
 	# Authorize and capture a sale
-	def process( self ):
-		self.gateway.process( self )
-		self.status = Transaction.CAPTURED
+	def process( self, callback=None, async=None ):
+		self.status_pending = Transaction.CAPTURED
+		self.gateway.process( self, callback or self.callback, self.async if async is None else async )
 
 	# Authorize a sale
-	def authorize( self ):
-		self.gateway.authorize( self )
-		self.status = Transaction.AUTHORIZED
+	def authorize( self, callback=None, async=None ):
+		self.status_pending = Transaction.AUTHORIZED
+		self.gateway.authorize( self, callback or self.callback, self.async if async is None else async )
 
 	# Captures funds from a successful authorization
-	def capture( self ):
-		self.gateway.capture( self )
-		self.status = Transaction.CAPTURED
+	def capture( self, callback=None, async=None ):
+		self.status_pending = Transaction.CAPTURED
+		self.gateway.capture( self, callback or self.callback, self.async if async is None else async )
 
 	# Void a sale
-	def void( self ):
-		self.gateway.void( self )
-		self.status = Transaction.VOIDED
+	def void( self, callback=None, async=None ):
+		self.status_pending = Transaction.VOIDED
+		self.gateway.void( self, callback or self.callback, self.async if async is None else async )
 
 	# Refund a processed transaction
-	def refund( self ):
-		self.gateway.refund( self )
-		self.status = Transaction.REFUNDED
+	def refund( self, callback=None, async=None ):
+		self.status_pending = Transaction.REFUNDED
+		self.gateway.refund( self, callback or self.callback, self.async if async is None else async )
 
 	# Updates the order information for the given transaction
-	def update( self ):
-		self.gateway.update( self )
+	def update( self, callback=None, async=None ):
+		self.gateway.update( self, callback or self.callback, self.async if async is None else async )

@@ -94,10 +94,10 @@ except TransactionFailed:
 
 ----------------------------------------------------
 
-Using payment.Gateway always take a string as the first argument which is used as
+Using payment_processor.Gateway always take a string as the first argument which is used as
 a simple way to dynamically load a specific gateway found in payment.gateways.
 
-You can easily create a gateway outside of the python-payment module, just create a
+You can easily create a gateway outside of the python-payment-processor module, just create a
 class that overloads payment.gateways.GenericGateway.
 
 ----------------------------------------------------
@@ -108,3 +108,45 @@ class MyGateway( GenericGateway )
 ...
 
 ----------------------------------------------------
+
+You can use payment_processor asynchronously
+
+----------------------------------------------------
+
+def callback( t ):
+	try:
+		t.handleResponse()
+	except TransactionDeclined:
+		# The transaction requested was declined for such reasons as insufficient funds or flagged for fraud.
+		raise
+	except InvalidCardNumber:
+		# The credit card number provided was invalid.
+		raise
+	except InvalidCardExpirationDate:
+		# The credit card expiration date provided was invalid.
+		raise
+	except InvalidCardCode:
+		# The credit card code provided was invalid.
+		raise
+	except InvalidRoutingNumber:
+		# The routing number provided was invalid (only applicable to Check methods).
+		raise
+	except InvalidAccountNumber:
+		# The account number provided was invalid (only applicable to Check methods).
+		raise
+	except InvalidBillingAddress:
+		# The billing address provided was invalid.
+		raise
+	except InvalidBillingZipcode:
+		# The billing zipcode provided was invalid.
+		raise
+	except TransactionAmountLimitExceeded:
+		# The per-transaction limit was exceeded.
+		raise
+	except TransactionFailed:
+		# The transaction failed for other reasons usually relating using python-payment in ways unsupported by the gateway.
+		raise
+
+t = payment_processor.Transaction( payment=payment, method=card, gateway=gateway, async=True, callback=callback )
+
+t.process()

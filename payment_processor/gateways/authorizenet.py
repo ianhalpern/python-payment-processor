@@ -121,27 +121,27 @@ class AuthorizeNetAIM_3_1( GenericGateway ):
 		self.api['x_tran_key'] = trans_key
 
 	@GenericGateway.checkTransactionStatus
-	def process( self, transaction ):
+	def process( self, transaction, callback=None, async=False ):
 		api = self.newAPI()
 
 		api['x_type'] = 'AUTH_CAPTURE'
 
 		self.populateAPI( transaction, api )
 
-		return self.call( transaction, api )
+		return self.call( transaction, api, callback, async )
 
 	@GenericGateway.checkTransactionStatus
-	def authorize( self, transaction ):
+	def authorize( self, transaction, callback=None, async=False ):
 		api = self.newAPI()
 
 		api['x_type'] = 'AUTH_ONLY'
 
 		self.populateAPI( transaction, api )
 
-		return self.call( transaction, api )
+		return self.call( transaction, api, callback, async )
 
 	@GenericGateway.checkTransactionStatus
-	def capture( self, transaction ):
+	def capture( self, transaction, callback=None, async=False ):
 		api = self.newAPI()
 
 		#if auth_code != None:
@@ -151,19 +151,19 @@ class AuthorizeNetAIM_3_1( GenericGateway ):
 		api['x_type']     = 'PRIOR_AUTH_CAPTURE'
 		api['x_trans_id'] = transaction.trans_id
 
-		return self.call( transaction, api )
+		return self.call( transaction, api, callback, async )
 
 	@GenericGateway.checkTransactionStatus
-	def void( self, transaction ):
+	def void( self, transaction, callback=None, async=False ):
 		api = self.newAPI()
 
 		api['x_type']     = 'VOID'
 		api['x_trans_id'] = transaction.trans_id
 
-		return self.call( transaction, api )
+		return self.call( transaction, api, callback, async )
 
 	@GenericGateway.checkTransactionStatus
-	def refund( self, transaction ):
+	def refund( self, transaction, callback=None, async=False ):
 		api = self.newAPI()
 
 		api['x_type']     = 'CREDIT'
@@ -171,11 +171,10 @@ class AuthorizeNetAIM_3_1( GenericGateway ):
 
 		self.populateAPI( transaction, api )
 
-		return self.call( transaction, api )
+		return self.call( transaction, api, callback, async )
 
-	def call( self, transaction, api ):
-
-		response = GenericGateway.call( self, api ).split( api['x_delim_char'] )
+	def handleResponse( self, transaction ):
+		response = transaction.last_response.split( self.api['x_delim_char'] )
 		print response
 		## Response ##
 		#  0 - Response Code: 1 = Approved, 2 = Declined, 3 = Error, 4 = Held for Review
@@ -205,7 +204,6 @@ class AuthorizeNetAIM_3_1( GenericGateway ):
 		# 42 - Split Tender ID
 		# 43 - Requested Amount
 		# 44 - Balance on Card
-
 
 		response_code = int(response[2])
 		response_text = response[3] + " (code %s)" % response_code
@@ -266,8 +264,6 @@ class AuthorizeNetAIM_3_1( GenericGateway ):
 
 			raise TransactionFailed( response_text, response_code=response_code )
 
-		return response_text
-
 	def populateAPI( self, transaction, api ):
 		api['x_trans_id']    = transaction.trans_id
 		api['x_amount']      = transaction.payment.amount
@@ -302,7 +298,6 @@ class AuthorizeNetAIM_3_1( GenericGateway ):
 		api['x_ship_to_zip']        = transaction.payment.ship_zip_code
 		api['x_ship_to_country']    = transaction.payment.ship_country
 
-		print transaction.method.__class__
 		if transaction.method.__class__ == payment_processor.methods.CreditCard:
 
 			api['x_method']    = 'CC'
