@@ -79,8 +79,9 @@ class Transaction( object ):
 
 	async = None
 	callback = None
+	api = None
 
-	def __init__( self, payment, method, gateway, status=PENDING, trans_id=None, callback=None, async=False ):
+	def __init__( self, payment, method, gateway, status=PENDING, trans_id=None, callback=None, async=False, api=None ):
 		self.payment = payment
 		self.method  = method
 		self.gateway = gateway
@@ -90,36 +91,75 @@ class Transaction( object ):
 
 		self.async = async
 		self.callback = callback or self.__class__.handleResponse
+		self.api = api or {}
 
 	def handleResponse( self ):
 		self.gateway.handleResponse( self )
 		self.status = self.status_pending
 
+	def mergeAPI( self, api ):
+		if api:
+			api.update( self.api )
+		else:
+			api = self.api
+		return api
+
 	# Authorize and capture a sale
-	def process( self, callback=None, async=None ):
+	def process( self, callback=None, async=None, api=None ):
 		self.status_pending = Transaction.CAPTURED
-		self.gateway.process( self, callback or self.callback, self.async if async is None else async )
+		self.gateway.process(
+			self,
+			callback or self.callback,
+			self.async if async is None else async,
+			self.mergeAPI( api )
+		)
 
 	# Authorize a sale
-	def authorize( self, callback=None, async=None ):
+	def authorize( self, callback=None, async=None, api=None ):
 		self.status_pending = Transaction.AUTHORIZED
-		self.gateway.authorize( self, callback or self.callback, self.async if async is None else async )
+		self.gateway.authorize(
+			self,
+			callback or self.callback,
+			self.async if async is None else async,
+			self.mergeAPI( api )
+		)
 
 	# Captures funds from a successful authorization
-	def capture( self, callback=None, async=None ):
+	def capture( self, callback=None, async=None, api=None ):
 		self.status_pending = Transaction.CAPTURED
-		self.gateway.capture( self, callback or self.callback, self.async if async is None else async )
+		self.gateway.capture(
+			self,
+			callback or self.callback,
+			self.async if async is None else async,
+			self.mergeAPI( api )
+		)
 
 	# Void a sale
-	def void( self, callback=None, async=None ):
+	def void( self, callback=None, async=None, api=None ):
 		self.status_pending = Transaction.VOIDED
-		self.gateway.void( self, callback or self.callback, self.async if async is None else async )
+
+		self.gateway.void(
+			self,
+			callback or self.callback,
+			self.async if async is None else async,
+			self.mergeAPI( api )
+		)
 
 	# Refund a processed transaction
-	def refund( self, callback=None, async=None ):
+	def refund( self, callback=None, async=None, api=None ):
 		self.status_pending = Transaction.REFUNDED
-		self.gateway.refund( self, callback or self.callback, self.async if async is None else async )
+		self.gateway.refund(
+			self,
+			callback or self.callback,
+			self.async if async is None else async,
+			self.mergeAPI( api )
+		)
 
 	# Updates the order information for the given transaction
-	def update( self, callback=None, async=None ):
-		self.gateway.update( self, callback or self.callback, self.async if async is None else async )
+	def update( self, callback=None, async=None, api=None ):
+		self.gateway.update(
+			self,
+			callback or self.callback,
+			self.async if async is None else async,
+			self.mergeAPI( api )
+		)

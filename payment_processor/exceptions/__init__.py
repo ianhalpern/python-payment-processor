@@ -47,6 +47,9 @@ class InvalidBillingAddress( Error ):
 class InvalidBillingZipcode( Error ):
 	pass
 
+class DuplicateTransaction( Error ):
+	pass
+
 AllFailedTransactionErrors = ( TransactionDeclined, InvalidCardNumber, InvalidCardExpirationDate,
 							   InvalidCardCode, InvalidRoutingNumber, InvalidAccountNumber, InvalidBillingAddress,
-							   InvalidBillingZipcode, TransactionAmountLimitExceeded, TransactionFailed )
+							   InvalidBillingZipcode, TransactionAmountLimitExceeded, TransactionFailed, DuplicateTransaction )

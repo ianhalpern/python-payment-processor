@@ -86,8 +86,8 @@ class NationalProcessing( GenericGateway ):
 		self.api['password'] = password
 
 	@GenericGateway.checkTransactionStatus
-	def process( self, transaction, callback=None, async=False ):
-		api = self.newAPI()
+	def process( self, transaction, callback=None, async=False, api=None ):
+		api = self.newAPI( api )
 
 		api['type'] = 'sale'
 
@@ -96,8 +96,8 @@ class NationalProcessing( GenericGateway ):
 		return self.call( transaction, api, callback, async )
 
 	@GenericGateway.checkTransactionStatus
-	def authorize( self, transaction, callback=None, async=False ):
-		api = self.newAPI()
+	def authorize( self, transaction, callback=None, async=False, api=None ):
+		api = self.newAPI( api )
 
 		api['type'] = 'auth'
 
@@ -106,11 +106,11 @@ class NationalProcessing( GenericGateway ):
 		return self.call( transaction, api, callback, async )
 
 	@GenericGateway.checkTransactionStatus
-	def capture( self, transaction, callback=None, async=False ):
+	def capture( self, transaction, callback=None, async=False, api=None ):
 		if not transaction.payment.amount:
 			raise ValueError( "National Processing's capture() requires a transaction with a defined payment amount." )
 
-		api = self.newAPI()
+		api = self.newAPI( api )
 
 		api['type']          = 'capture'
 		api['transactionid'] = transaction.trans_id
@@ -120,8 +120,8 @@ class NationalProcessing( GenericGateway ):
 		return self.call( transaction, api, callback, async )
 
 	@GenericGateway.checkTransactionStatus
-	def void( self, transaction, callback=None, async=False ):
-		api = self.newAPI()
+	def void( self, transaction, callback=None, async=False, api=None ):
+		api = self.newAPI( api )
 
 		api['type']          = 'void'
 		api['transactionid'] = transaction.trans_id
@@ -129,8 +129,8 @@ class NationalProcessing( GenericGateway ):
 		return self.call( transaction, api, callback, async )
 
 	@GenericGateway.checkTransactionStatus
-	def refund( self, transaction, callback=None, async=False ):
-		api = self.newAPI()
+	def refund( self, transaction, callback=None, async=False, api=None ):
+		api = self.newAPI( api )
 
 		api['type']          = 'refund'
 		api['transactionid'] = transaction.trans_id
@@ -139,8 +139,8 @@ class NationalProcessing( GenericGateway ):
 		return self.call( transaction, api, callback, async )
 
 	@GenericGateway.checkTransactionStatus
-	def update( self, transaction, callback=None, async=False ):
-		api = self.newAPI()
+	def update( self, transaction, callback=None, async=False, api=None ):
+		api = self.newAPI( api )
 
 		api['type']          = 'update'
 		api['transactionid'] = transaction.trans_id

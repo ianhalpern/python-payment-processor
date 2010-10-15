@@ -44,8 +44,10 @@ class GenericGateway( object ):
 		else:
 			self.handleResponse( transaction )
 
-	def newAPI( self ):
-		return dict( self.api )
+	def newAPI( self, api=None ):
+		new_api = dict( self.api )
+		if api: new_api.update( api )
+		return new_api
 
 	@staticmethod
 	def checkTransactionStatus( method ):
@@ -99,29 +101,29 @@ class GenericGateway( object ):
 		raise NotImplementedError
 
 	# Authorize and capture a sale
-	def process( self, transaction, callback=None, async=False ):
+	def process( self, transaction, callback=None, async=False, api=None ):
 		raise NotImplementedError
 
 	# Authorize a sale
-	def authorize( self, transaction, callback=None, async=False ):
+	def authorize( self, transaction, callback=None, async=False, api=None ):
 		raise NotImplementedError
 
 	# Captures funds from a successful authorization
-	def capture( self, transaction, callback=None, async=False ):
+	def capture( self, transaction, callback=None, async=False, api=None ):
 		raise NotImplementedError
 
 	# Void a sale
-	def void( self, transaction, callback=None, async=False ):
+	def void( self, transaction, callback=None, async=False, api=None ):
 		raise NotImplementedError
 
 	# Refund a processed transaction
-	def refund( self, transaction, callback=None, async=False ):
+	def refund( self, transaction, callback=None, async=False, api=None ):
 		raise NotImplementedError
 
 	# Credits an account
-	def credit( self, transaction, callback=None, async=False ):
+	def credit( self, transaction, callback=None, async=False, api=None ):
 		raise NotImplementedError
 
 	# Updates the order information for the given transaction
-	def update( self, transaction, callback=None, async=False ):
+	def update( self, transaction, callback=None, async=False, api=None ):
 		raise NotImplementedError

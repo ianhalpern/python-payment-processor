@@ -6,29 +6,29 @@ class DummyGateway( GenericGateway ):
 		pass
 
 	@GenericGateway.checkTransactionStatus
-	def process( self, transaction, callback=None, async=False ):
+	def process( self, transaction, callback=None, async=False, api=None ):
 		if callback: callback( transaction )
 
 	@GenericGateway.checkTransactionStatus
-	def authorize( self, transaction, callback=None, async=False ):
+	def authorize( self, transaction, callback=None, async=False, api=None ):
 		if callback: callback( transaction )
 
 	@GenericGateway.checkTransactionStatus
-	def capture( self, transaction, callback=None, async=False ):
+	def capture( self, transaction, callback=None, async=False, api=None ):
 		if callback: callback( transaction )
 
 	@GenericGateway.checkTransactionStatus
-	def void( self, transaction, callback=None, async=False ):
+	def void( self, transaction, callback=None, async=False, api=None ):
 		if callback: callback( transaction )
 
 	@GenericGateway.checkTransactionStatus
-	def refund( self, transaction, callback=None, async=False ):
+	def refund( self, transaction, callback=None, async=False, api=None ):
 		if callback: callback( transaction )
 
 	@GenericGateway.checkTransactionStatus
-	def credit( self, transaction, callback=None, async=False ):
+	def credit( self, transaction, callback=None, async=False, api=None ):
 		if callback: callback( transaction )
 
 	@GenericGateway.checkTransactionStatus
-	def update( self, transaction, callback=None, async=False ):
+	def update( self, transaction, callback=None, async=False, api=None ):
 		if callback: callback( transaction )

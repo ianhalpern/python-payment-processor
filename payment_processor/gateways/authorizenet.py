@@ -121,8 +121,8 @@ class AuthorizeNetAIM_3_1( GenericGateway ):
 		self.api['x_tran_key'] = trans_key
 
 	@GenericGateway.checkTransactionStatus
-	def process( self, transaction, callback=None, async=False ):
-		api = self.newAPI()
+	def process( self, transaction, callback=None, async=False, api=None ):
+		api = self.newAPI( api )
 
 		api['x_type'] = 'AUTH_CAPTURE'
 
@@ -131,8 +131,8 @@ class AuthorizeNetAIM_3_1( GenericGateway ):
 		return self.call( transaction, api, callback, async )
 
 	@GenericGateway.checkTransactionStatus
-	def authorize( self, transaction, callback=None, async=False ):
-		api = self.newAPI()
+	def authorize( self, transaction, callback=None, async=False, api=None ):
+		api = self.newAPI( api )
 
 		api['x_type'] = 'AUTH_ONLY'
 
@@ -141,8 +141,8 @@ class AuthorizeNetAIM_3_1( GenericGateway ):
 		return self.call( transaction, api, callback, async )
 
 	@GenericGateway.checkTransactionStatus
-	def capture( self, transaction, callback=None, async=False ):
-		api = self.newAPI()
+	def capture( self, transaction, callback=None, async=False, api=None ):
+		api = self.newAPI( api )
 
 		#if auth_code != None:
 		#	api['x_type'] = 'CAPTURE_ONLY'
@@ -154,8 +154,8 @@ class AuthorizeNetAIM_3_1( GenericGateway ):
 		return self.call( transaction, api, callback, async )
 
 	@GenericGateway.checkTransactionStatus
-	def void( self, transaction, callback=None, async=False ):
-		api = self.newAPI()
+	def void( self, transaction, callback=None, async=False, api=None ):
+		api = self.newAPI( api )
 
 		api['x_type']     = 'VOID'
 		api['x_trans_id'] = transaction.trans_id
@@ -163,8 +163,8 @@ class AuthorizeNetAIM_3_1( GenericGateway ):
 		return self.call( transaction, api, callback, async )
 
 	@GenericGateway.checkTransactionStatus
-	def refund( self, transaction, callback=None, async=False ):
-		api = self.newAPI()
+	def refund( self, transaction, callback=None, async=False, api=None ):
+		api = self.newAPI( api )
 
 		api['x_type']     = 'CREDIT'
 		api['x_trans_id'] = transaction.trans_id
@@ -257,6 +257,9 @@ class AuthorizeNetAIM_3_1( GenericGateway ):
 
 			if response_code in ( 2, 3, 4, 41, 250, 251 ):
 				raise TransactionDeclined( response_text, response_code=response_code )
+
+			if response_code in ( 11, 222, 318 ):
+				raise DuplicateTransaction( response_text, response_code=response_code )
 			#print api
 			# if response[0] == '2': # Declined
 			#	raise ProcessingDeclined( response[3], error_code=response[2], avs_response=avs_response, ccv_response=ccv_response )
