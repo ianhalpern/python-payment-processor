@@ -1,6 +1,6 @@
-Python Payment Processor - (c) Ian Halpern 2010
+Python Payment Processor - (c) RentShare Inc 2012, Author: Ian Halpern
 
-Python Payment Processor is a library for python that acts as a simple abstraction around various payment methods and payment gateways. It includes support for standard gateways such as Authorize.net and is always working to expand it's supported gateway repertoire. Python Payment is currently being used in production systems transferring tens of thousands of dollars a month.
+Python Payment Processor is a library for python providing a simple abstraction around various payment methods and payment gateways. It includes support for standard gateways such as Authorize.net and is always working to expand it's supported gateway repertoire. Python Payment is currently being used in production systems transferring hundreds of thousands of dollars a month.
 
 Python Payment Processor is released under the MIT license.
 
@@ -8,13 +8,11 @@ Python Payment Processor is released under the MIT license.
 
 INSTALL:
 
-To install python-payment-processor on a linux system run:
+To install python-payment-processor run:
 
 $ sudo ./setup.py install
 
 HOW TO:
-
-Using python-payment-processor is very straight forward.
 
 Here is a simple example using the authroize.net payment gateway. This example
 creates a authorize.net payment gateway and a credit card transaction and
@@ -106,47 +104,3 @@ from payment_processor.gateways import GenericGateway
 
 class MyGateway( GenericGateway )
 ...
-
-----------------------------------------------------
-
-You can use payment_processor asynchronously
-
-----------------------------------------------------
-
-def callback( t ):
-	try:
-		t.handleResponse()
-	except TransactionDeclined:
-		# The transaction requested was declined for such reasons as insufficient funds or flagged for fraud.
-		raise
-	except InvalidCardNumber:
-		# The credit card number provided was invalid.
-		raise
-	except InvalidCardExpirationDate:
-		# The credit card expiration date provided was invalid.
-		raise
-	except InvalidCardCode:
-		# The credit card code provided was invalid.
-		raise
-	except InvalidRoutingNumber:
-		# The routing number provided was invalid (only applicable to Check methods).
-		raise
-	except InvalidAccountNumber:
-		# The account number provided was invalid (only applicable to Check methods).
-		raise
-	except InvalidBillingAddress:
-		# The billing address provided was invalid.
-		raise
-	except InvalidBillingZipcode:
-		# The billing zipcode provided was invalid.
-		raise
-	except TransactionAmountLimitExceeded:
-		# The per-transaction limit was exceeded.
-		raise
-	except TransactionFailed:
-		# The transaction failed for other reasons usually relating using python-payment in ways unsupported by the gateway.
-		raise
-
-t = payment_processor.Transaction( payment=payment, method=card, gateway=gateway, async=True, callback=callback )
-
-t.process()

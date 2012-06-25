@@ -121,27 +121,27 @@ class AuthorizeNetAIM_3_1( GenericGateway ):
 		self.api['x_tran_key'] = trans_key
 
 	@GenericGateway.checkTransactionStatus
-	def process( self, transaction, callback=None, async=False, api=None ):
+	def process( self, transaction, api=None ):
 		api = self.newAPI( api )
 
 		api['x_type'] = 'AUTH_CAPTURE'
 
 		self.populateAPI( transaction, api )
 
-		return self.call( transaction, api, callback, async )
+		return self.call( transaction, api )
 
 	@GenericGateway.checkTransactionStatus
-	def authorize( self, transaction, callback=None, async=False, api=None ):
+	def authorize( self, transaction, api=None ):
 		api = self.newAPI( api )
 
 		api['x_type'] = 'AUTH_ONLY'
 
 		self.populateAPI( transaction, api )
 
-		return self.call( transaction, api, callback, async )
+		return self.call( transaction, api )
 
 	@GenericGateway.checkTransactionStatus
-	def capture( self, transaction, callback=None, async=False, api=None ):
+	def capture( self, transaction, api=None ):
 		api = self.newAPI( api )
 
 		#if auth_code != None:
@@ -151,19 +151,19 @@ class AuthorizeNetAIM_3_1( GenericGateway ):
 		api['x_type']     = 'PRIOR_AUTH_CAPTURE'
 		api['x_trans_id'] = transaction.trans_id
 
-		return self.call( transaction, api, callback, async )
+		return self.call( transaction, api )
 
 	@GenericGateway.checkTransactionStatus
-	def void( self, transaction, callback=None, async=False, api=None ):
+	def void( self, transaction, api=None ):
 		api = self.newAPI( api )
 
 		api['x_type']     = 'VOID'
 		api['x_trans_id'] = transaction.trans_id
 
-		return self.call( transaction, api, callback, async )
+		return self.call( transaction, api )
 
 	@GenericGateway.checkTransactionStatus
-	def refund( self, transaction, callback=None, async=False, api=None ):
+	def refund( self, transaction, api=None ):
 		api = self.newAPI( api )
 
 		api['x_type']     = 'CREDIT'
@@ -171,7 +171,7 @@ class AuthorizeNetAIM_3_1( GenericGateway ):
 
 		self.populateAPI( transaction, api )
 
-		return self.call( transaction, api, callback, async )
+		return self.call( transaction, api )
 
 	def handleResponse( self, transaction ):
 		response = transaction.last_response.split( self.api['x_delim_char'] )

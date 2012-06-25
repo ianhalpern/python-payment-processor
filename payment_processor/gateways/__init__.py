@@ -1,7 +1,6 @@
 import types, urllib2, urllib
 from payment_processor.exceptions import *
 from payment_processor import Transaction
-from payment_processor.utils import async_urllib2
 from functools import partial
 
 class GenericGateway( object ):
@@ -26,23 +25,17 @@ class GenericGateway( object ):
 
 		self.api = self.newAPI() # creates a new api instance from the global api object
 
-	def call( self, transaction, api, callback=None, async=False ):
+	def call( self, transaction, api ):
 		post_str = '&'.join( [ k + '=' + urllib.quote( str(v) ) for k, v in api.items() if v != None ] )
 
 		request = urllib2.Request( self.url, post_str )
 
-		if not async:
-			response = urllib2.urlopen( request ).read()
-			return self.onResponseReady( transaction, response, callback )
-		else:
-			async_urllib2.urlopen( request, partial( self.onResponseReady, transaction, callback=callback ) )
+		response = urllib2.urlopen( request ).read()
+		return self.onResponseReady( transaction, response )
 
-	def onResponseReady( self, transaction, response, callback=None ):
+	def onResponseReady( self, transaction, response ):
 		transaction.last_response = response
-		if callback:
-			callback( transaction )
-		else:
-			self.handleResponse( transaction )
+		self.handleResponse( transaction )
 
 	def newAPI( self, api=None ):
 		new_api = dict( self.api )
@@ -101,29 +94,29 @@ class GenericGateway( object ):
 		raise NotImplementedError
 
 	# Authorize and capture a sale
-	def process( self, transaction, callback=None, async=False, api=None ):
+	def process( self, transaction, api=None ):
 		raise NotImplementedError
 
 	# Authorize a sale
-	def authorize( self, transaction, callback=None, async=False, api=None ):
+	def authorize( self, transaction, api=None ):
 		raise NotImplementedError
 
 	# Captures funds from a successful authorization
-	def capture( self, transaction, callback=None, async=False, api=None ):
+	def capture( self, transaction, api=None ):
 		raise NotImplementedError
 
 	# Void a sale
-	def void( self, transaction, callback=None, async=False, api=None ):
+	def void( self, transaction, api=None ):
 		raise NotImplementedError
 
 	# Refund a processed transaction
-	def refund( self, transaction, callback=None, async=False, api=None ):
+	def refund( self, transaction, api=None ):
 		raise NotImplementedError
 
 	# Credits an account
-	def credit( self, transaction, callback=None, async=False, api=None ):
+	def credit( self, transaction, api=None ):
 		raise NotImplementedError
 
 	# Updates the order information for the given transaction
-	def update( self, transaction, callback=None, async=False, api=None ):
+	def update( self, transaction, api=None ):
 		raise NotImplementedError
